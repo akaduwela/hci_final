@@ -17,17 +17,19 @@ import cv2
 import numpy as np
 import random
 
+## Define some globals
 
+# cascade filters for face, eye, and smile
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
 smile_cascade = cv2.CascadeClassifier('haarcascade_smile.xml')
 
 
+# To formulate path string for memes
 src_path = 'memes/'
-
 meme_dict = {0: "drake.jpg", 1:"jesus.png", 2:"kermit.jpg", 3:"pikachu.png", 4:"you-can-do-it-meme-3-1.jpeg"}
 
-
+## Counters and flags for logic
 counter = 0
 meme_counter = 0
 
@@ -40,10 +42,13 @@ memescreen = False
 lookaway_threshold = 100
 meme_threshold = 100
 
+# Load sounds
 alarm_sound = SoundLoader.load('sounds/alarm.mp3')
 notif_sound = SoundLoader.load('sounds/notif.mp3')
 
 
+
+# Update value of global thresholds whenever text entry is edited 
 def on_text1(instance, value):
 	global lookaway_threshold
 	lookaway_threshold = int(value)*33
@@ -53,6 +58,7 @@ def on_text2(instance, value):
 	meme_threshold = int(value)*33
 
 
+# Global popup setup for settings page
 settingslayout = BoxLayout(padding=10, orientation='vertical')
 set_subbox1 = BoxLayout(padding=10, size_hint=(1,0.4), orientation='vertical')
 set_subbox2 = BoxLayout(padding=10, size_hint=(1,0.4), orientation='vertical')
@@ -69,7 +75,7 @@ meme_input.bind(text=on_text2)
 
 set_btn = Button(text="Save")
 
-
+## add widgets to layouts
 set_subbox1.add_widget(alarm_label)
 set_subbox1.add_widget(alarm_input)
 set_subbox2.add_widget(meme_label)
@@ -88,9 +94,12 @@ settings = Popup(title="Settings",
 set_btn.bind(on_press=settings.dismiss)
 
 
+# dismiss the settings window
 def on_save(instance):
 	settings.dismiss()
 
+
+# Activate or deactivate functionality.
 def lookaway(instance):
 	global lookaway, counter, alarm_sound
 	if (lookaway):
@@ -114,10 +123,13 @@ def memescreen(instance):
 
 class CamApp(App):
 
+	## Build main screen of app. arrange so that camera is on top.
 	def build(self):
+		# keypress support setup
 		self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
 		self._keyboard.bind(on_key_down=self._on_keyboard_down)
 
+		# load video and buttons below video. add them to layout
 		self.img1 = Image(source='images/1.jpg')
 		layout = BoxLayout(padding=10, orientation="vertical")
 		sublayout1 = BoxLayout(padding=10, orientation="horizontal", size_hint = (1,0.8))
@@ -146,9 +158,11 @@ class CamApp(App):
 		return layout
 
 
+	# keyboard on close
 	def _keyboard_closed(self):
 		self._keyboard.unbind(on_key_down=self._on_keyboard_down)
 		self._keyboard = None
+
 
 	def CreateImage(self, height, width, bits=np.uint8, channels=3, color=(0, 0, 0)): # (cv.GetSize(frame), 8, 3)
 		"""Create new image(numpy array) filled with certain color in RGB"""
@@ -165,6 +179,7 @@ class CamApp(App):
 		    image[:] = color
 		return image
 
+	# runs every 1/33 seconds. updates the display
 	def update(self, dt):
 		# display image from cam in opencv window
 		global counter, meme_counter, meme, alarm, lookaway, memescreen, alarm_sound, notif_sound, meme_threshold, lookaway_threshold
@@ -182,7 +197,7 @@ class CamApp(App):
 
 		faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
-
+		# display meme
 		if (meme):
 			## load meme here
 			idx = random.randint(0,4)
@@ -204,13 +219,15 @@ class CamApp(App):
 			dismiss_btn.bind(on_press=popup.dismiss)
 			popup.open()
 			
-
+			# play sound. set to repeat on half the length.
 			if(notif_sound):
 				notif_sound.play()
 			print("meme loaded!")
 			meme = False
 			meme_counter = meme_counter/2
 
+
+		# play alarm noise. repeat every half length
 		if (alarm):
 			print("WAKE UP!")
 			if(alarm_sound):
@@ -220,7 +237,9 @@ class CamApp(App):
 
 		if (lookaway):
 			counter += 1
+			print("lookaway:", counter)
 			
+		## find faces. find eyes and smiles within faces.
 		for (x,y,w,h) in faces:
 			roi_gray = gray[y:y+h, x:x+w]
 			roi_color = frame[y:y+h, x:x+w]
@@ -248,7 +267,7 @@ class CamApp(App):
 			else:
 				if (len(eyes) > 1):
 					if (memescreen):
-						print(meme_counter)
+						print("meme counter: ", meme_counter)
 						meme_counter += 1
 					#print(meme_counter)        
 
@@ -261,6 +280,7 @@ class CamApp(App):
 				print("Loading meme... ")
 				meme = True
 
+	# keypresses. m mutes alarm sound. s opens settings page. q dismisses the settings page
 	def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
 		global alarm_sound, counter, meme_counter, settings
 		if keycode[1] == 'm':
